@@ -8,20 +8,16 @@ Current host cron:
 17 */4 * * * cd /home/ubuntu/skirmshop/shopify-sync-app && /usr/bin/npx tsx scripts/sync-warehouse-locations.ts sync
 ```
 
-This repo stages the k8s replacement as a suspended CronJob. It must stay
-`suspend: true` until the image is built, a manual Job succeeds, and the host
-cron is removed.
+This repo runs the k8s replacement for the former `sauvage` host cron.
 
 The state PVC uses Longhorn, so the CronJob is pinned to an amd64 LAN node
 rather than the `sauvage` edge node. The container reads state from
 `WAREHOUSE_SYNC_STATE_FILE=/state/.warehouse-sync-state.json`.
 
-Activation steps:
+Activation record:
 
-1. Build and push `harbor.e-dani.com/homelab/shopify-sync-app:<tag>`.
-2. Store required Shopify/Picqer secrets at `secret/skirmshop/shopify-sync`.
-3. Replace the image digest.
-4. Seed `shopify-sync-state` with the current host `.warehouse-sync-state.json`.
-5. Run `kustomize build k8s`.
-6. Create a manual Job from the CronJob and verify state in the PVC.
-7. Remove the host cron, then set `suspend: false`.
+1. Image built from `pocharlies-org/shopify-sync-app` and pushed to Harbor.
+2. Shopify/Picqer secrets stored at `secret/skirmshop/shopify-sync`.
+3. `shopify-sync-state` seeded from the host `.warehouse-sync-state.json`.
+4. Manual Job `shopify-sync-manual-20260527045004` completed on 2026-05-27.
+5. Host cron `warehouse_sync` removed after backup.
