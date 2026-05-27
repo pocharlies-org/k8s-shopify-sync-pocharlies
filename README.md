@@ -16,7 +16,8 @@ Activation steps:
 
 1. Build and push `harbor.e-dani.com/homelab/shopify-sync-app:<tag>`.
 2. Store required Shopify/Picqer secrets at `secret/skirmshop/shopify-sync`.
-3. Replace the `pending` image tag.
-4. Run `kustomize build k8s`.
-5. Create a manual Job from the CronJob and verify state in the PVC.
-6. Remove the host cron, then set `suspend: false`.
+3. Replace the image digest.
+4. Seed `shopify-sync-state` with the current host `.warehouse-sync-state.json`.
+5. Run `kustomize build k8s`.
+6. Create a manual Job from the CronJob and verify state in the PVC.
+7. Remove the host cron, then set `suspend: false`.
