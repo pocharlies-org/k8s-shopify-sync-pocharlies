@@ -32,7 +32,7 @@ spec:
             topology: lan
           containers:
             - name: warehouse-sync
-              image: harbor.e-dani.com/homelab/shopify-sync-app@sha256:036f81732e8380728434a7774b85f4fcc13be59239658f24e6218611fb2b2029
+              image: harbor.e-dani.com/homelab/shopify-sync-app@sha256:74ba905635d5fd6d5c502d58b0c6f65e4e71baa9f6d9d4a2d641881d0ab128cc
               imagePullPolicy: IfNotPresent
               workingDir: /app
               command:
@@ -40,11 +40,14 @@ spec:
                 - -ec
                 - |
                   mkdir -p /state
-                  if [ ! -f /state/.warehouse-sync-state.json ] && [ -f /app/.warehouse-sync-state.json ]; then
-                    cp /app/.warehouse-sync-state.json /state/.warehouse-sync-state.json
+                  if [ ! -s /state/.warehouse-sync-state.json ]; then
+                    echo "State file missing: /state/.warehouse-sync-state.json" >&2
+                    exit 1
                   fi
-                  ln -sf /state/.warehouse-sync-state.json /app/.warehouse-sync-state.json
                   node dist/scripts/sync-warehouse-locations.js sync
+              env:
+                - name: WAREHOUSE_SYNC_STATE_FILE
+                  value: /state/.warehouse-sync-state.json
               envFrom:
                 - secretRef:
                     name: shopify-sync-secrets

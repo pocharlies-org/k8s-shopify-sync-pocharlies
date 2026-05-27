@@ -13,7 +13,8 @@ This repo stages the k8s replacement as a suspended CronJob. It must stay
 cron is removed.
 
 The state PVC uses Longhorn, so the CronJob is pinned to an amd64 LAN node
-rather than the `sauvage` edge node.
+rather than the `sauvage` edge node. The container reads state from
+`WAREHOUSE_SYNC_STATE_FILE=/state/.warehouse-sync-state.json`.
 
 Activation steps:
 
