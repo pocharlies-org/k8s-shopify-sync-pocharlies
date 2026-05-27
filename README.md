@@ -12,6 +12,9 @@ This repo stages the k8s replacement as a suspended CronJob. It must stay
 `suspend: true` until the image is built, a manual Job succeeds, and the host
 cron is removed.
 
+The state PVC uses Longhorn, so the CronJob is pinned to an amd64 LAN node
+rather than the `sauvage` edge node.
+
 Activation steps:
 
 1. Build and push `harbor.e-dani.com/homelab/shopify-sync-app:<tag>`.

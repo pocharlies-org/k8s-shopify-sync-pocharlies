@@ -28,13 +28,8 @@ spec:
           imagePullSecrets:
             - name: harbor-pull
           nodeSelector:
-            role: edge
             kubernetes.io/arch: amd64
-          tolerations:
-            - key: role
-              operator: Equal
-              value: edge
-              effect: NoSchedule
+            topology: lan
           containers:
             - name: warehouse-sync
               image: harbor.e-dani.com/homelab/shopify-sync-app@sha256:036f81732e8380728434a7774b85f4fcc13be59239658f24e6218611fb2b2029
