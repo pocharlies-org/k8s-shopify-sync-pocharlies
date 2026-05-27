@@ -1,0 +1,69 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: shopify-sync-warehouse
+  labels:
+    app.kubernetes.io/name: shopify-sync
+    app.kubernetes.io/component: cron
+spec:
+  schedule: "17 */4 * * *"
+  timeZone: Europe/Madrid
+  suspend: true
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 600
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 7200
+      ttlSecondsAfterFinished: 86400
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: shopify-sync
+            app.kubernetes.io/component: cron
+        spec:
+          restartPolicy: Never
+          imagePullSecrets:
+            - name: harbor-pull
+          nodeSelector:
+            role: edge
+            kubernetes.io/arch: amd64
+          tolerations:
+            - key: role
+              operator: Equal
+              value: edge
+              effect: NoSchedule
+          containers:
+            - name: warehouse-sync
+              image: harbor.e-dani.com/homelab/shopify-sync-app:pending
+              imagePullPolicy: IfNotPresent
+              workingDir: /app
+              command:
+                - sh
+                - -ec
+                - |
+                  mkdir -p /state
+                  if [ ! -f /state/.warehouse-sync-state.json ] && [ -f /app/.warehouse-sync-state.json ]; then
+                    cp /app/.warehouse-sync-state.json /state/.warehouse-sync-state.json
+                  fi
+                  ln -sf /state/.warehouse-sync-state.json /app/.warehouse-sync-state.json
+                  npx tsx scripts/sync-warehouse-locations.ts sync
+              envFrom:
+                - secretRef:
+                    name: shopify-sync-secrets
+                    optional: true
+              volumeMounts:
+                - name: state
+                  mountPath: /state
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 256Mi
+                limits:
+                  memory: 1Gi
+          volumes:
+            - name: state
+              persistentVolumeClaim:
+                claimName: shopify-sync-state
