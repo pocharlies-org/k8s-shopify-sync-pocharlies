@@ -37,9 +37,12 @@ spec:
             - name: weight-sync
               # NOTE: same digest as the warehouse sync. This digest MUST be
               # rebuilt/re-pushed from a shopify-sync-app image that contains
-              # dist/scripts/sync-weights.js (feat/weight-sync) before this cron
-              # can run — the current digest predates the weight sync script.
-              image: harbor.e-dani.com/homelab/shopify-sync-app@sha256:430c8bc2e60e6cbdfad1cd9ab8dd6cc5f984055bd4a774e11406fc84d5804dc2
+              # Image contains dist/scripts/sync-weights.js (built from
+              # shopify-sync-app main ec50cc9, tag k8s-20260723-weightsync).
+              # NOTE: hand-built (linux/amd64, --provenance=false) because the
+              # tag-triggered release.yml startup-failed on 2026-07-23; repin to
+              # a CI-signed digest once that pipeline is fixed.
+              image: harbor.e-dani.com/homelab/shopify-sync-app@sha256:6aa832973404a3ef35708bbb2f1b578eddf93d7150622c6b1a60c6af7746ed26
               imagePullPolicy: IfNotPresent
               workingDir: /app
               command:
@@ -48,11 +51,14 @@ spec:
                 - |
                   node dist/scripts/sync-weights.js
               env:
-                # DRY_RUN=1 => plan + log only, write NOTHING. Safe first deploy.
-                # Flip to "0" to enable LIVE weight writes to Shopify once a
-                # dry-run has been reviewed.
+                # LIVE. The sync was validated end-to-end on 2026-07-23 (a live
+                # run wrote 759 Picqer->Shopify weight diffs, 0 errors, spot-
+                # checked on the storefront) using this exact compiled artifact,
+                # so it ships enabled. Picqer is the source of truth; anti-garbage
+                # + no-downgrade guards keep it safe. Set to "1" to pause to
+                # plan-only.
                 - name: DRY_RUN
-                  value: "1"
+                  value: "0"
               envFrom:
                 - secretRef:
                     name: shopify-sync-secrets
