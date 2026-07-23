@@ -35,14 +35,12 @@ spec:
             topology: lan
           containers:
             - name: weight-sync
-              # NOTE: same digest as the warehouse sync. This digest MUST be
-              # rebuilt/re-pushed from a shopify-sync-app image that contains
-              # Image contains dist/scripts/sync-weights.js (built from
-              # shopify-sync-app main ec50cc9, tag k8s-20260723-weightsync).
-              # NOTE: hand-built (linux/amd64, --provenance=false) because the
-              # tag-triggered release.yml startup-failed on 2026-07-23; repin to
-              # a CI-signed digest once that pipeline is fixed.
-              image: harbor.e-dani.com/homelab/shopify-sync-app@sha256:6aa832973404a3ef35708bbb2f1b578eddf93d7150622c6b1a60c6af7746ed26
+              # CI-signed image (cosign keyless + Trivy-gated) built by
+              # release.yml from tag k8s-20260723-cifix4 (main 9029b14) — the
+              # release pipeline was fixed 2026-07-23 (startup + base-image npm
+              # CVEs). Contains dist/scripts/sync-weights.js. Replaces the earlier
+              # hand-built stopgap digest.
+              image: harbor.e-dani.com/homelab/shopify-sync-app@sha256:565e920b8acfd9031dee9e64e46b8f1326e183059f38e1755225774f5becb78b
               imagePullPolicy: IfNotPresent
               workingDir: /app
               command:
