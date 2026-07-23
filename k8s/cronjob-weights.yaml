@@ -1,0 +1,64 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: shopify-sync-weights
+  labels:
+    app.kubernetes.io/name: shopify-sync
+    app.kubernetes.io/component: cron
+spec:
+  # Offset from the warehouse-location sync ("17 */4 * * *") to avoid running
+  # both at the same minute. Weight sync is stateless (reads Picqer + Shopify
+  # live each run) so it needs no PVC.
+  schedule: "41 */6 * * *"
+  timeZone: Europe/Madrid
+  suspend: false
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 600
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 7200
+      ttlSecondsAfterFinished: 86400
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: shopify-sync
+            app.kubernetes.io/component: cron
+        spec:
+          restartPolicy: Never
+          imagePullSecrets:
+            - name: harbor-pull
+          nodeSelector:
+            kubernetes.io/arch: amd64
+            topology: lan
+          containers:
+            - name: weight-sync
+              # NOTE: same digest as the warehouse sync. This digest MUST be
+              # rebuilt/re-pushed from a shopify-sync-app image that contains
+              # dist/scripts/sync-weights.js (feat/weight-sync) before this cron
+              # can run — the current digest predates the weight sync script.
+              image: harbor.e-dani.com/homelab/shopify-sync-app@sha256:430c8bc2e60e6cbdfad1cd9ab8dd6cc5f984055bd4a774e11406fc84d5804dc2
+              imagePullPolicy: IfNotPresent
+              workingDir: /app
+              command:
+                - sh
+                - -ec
+                - |
+                  node dist/scripts/sync-weights.js
+              env:
+                # DRY_RUN=1 => plan + log only, write NOTHING. Safe first deploy.
+                # Flip to "0" to enable LIVE weight writes to Shopify once a
+                # dry-run has been reviewed.
+                - name: DRY_RUN
+                  value: "1"
+              envFrom:
+                - secretRef:
+                    name: shopify-sync-secrets
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 256Mi
+                limits:
+                  memory: 1Gi
