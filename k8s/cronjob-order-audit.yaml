@@ -1,0 +1,56 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: shopify-picqer-order-audit
+  labels:
+    app.kubernetes.io/name: shopify-sync
+    app.kubernetes.io/component: order-audit
+spec:
+  schedule: "30 2 * * *"
+  timeZone: Europe/Madrid
+  suspend: false
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 1800
+  successfulJobsHistoryLimit: 7
+  failedJobsHistoryLimit: 7
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 1800
+      ttlSecondsAfterFinished: 604800
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: shopify-sync
+            app.kubernetes.io/component: order-audit
+        spec:
+          restartPolicy: Never
+          imagePullSecrets:
+            - name: harbor-pull
+          nodeSelector:
+            kubernetes.io/arch: amd64
+            topology: lan
+          containers:
+            - name: order-audit
+              image: harbor.e-dani.com/homelab/shopify-sync-app@sha256:a56ac80e6c0fe8465db4bccfcb666aee40a6c3c9c7b19617e69104a3e6e39268
+              imagePullPolicy: IfNotPresent
+              workingDir: /app
+              command:
+                - node
+                - dist/scripts/audit-shopify-picqer-orders.js
+              env:
+                - name: ORDER_AUDIT_LOOKBACK_DAYS
+                  value: "14"
+                - name: ORDER_AUDIT_MIN_AGE_MINUTES
+                  value: "15"
+                - name: SHOPIFY_ORDER_AUDIT_API_VERSION
+                  value: "2026-07"
+              envFrom:
+                - secretRef:
+                    name: shopify-sync-secrets
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 128Mi
+                limits:
+                  memory: 512Mi

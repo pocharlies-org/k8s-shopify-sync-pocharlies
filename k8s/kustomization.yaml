@@ -8,6 +8,7 @@ resources:
   - pvc.yaml
   - cronjob.yaml
   - cronjob-weights.yaml
+  - cronjob-order-audit.yaml
 
 labels:
   - includeSelectors: false
