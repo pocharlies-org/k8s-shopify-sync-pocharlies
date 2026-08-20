@@ -48,9 +48,17 @@ spec:
               envFrom:
                 - secretRef:
                     name: shopify-sync-secrets
+              # I/O-bound API sync: it spends its time waiting on Picqer and
+              # Shopify, so 25m is a sufficient floor. There is no CPU limit
+              # here, so this lowers the guaranteed floor only, never the burst.
+              # `ubuntu` is the only amd64 + topology=lan node and ~9 of its 16
+              # CPU are legitimately reserved by bursty inference services, so
+              # even a small floor is enough to leave a run Pending. Residual
+              # Pending runs are accepted rather than chased:
+              # activeDeadlineSeconds clears them and the schedule retries.
               resources:
                 requests:
-                  cpu: 50m
+                  cpu: 25m
                   memory: 128Mi
                 limits:
                   memory: 512Mi
