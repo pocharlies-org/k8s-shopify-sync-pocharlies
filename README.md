@@ -40,5 +40,17 @@ The audit detects:
 An operational manual Picqer repair with an exact Shopify reference such as
 `ORD18753` is accepted, so historical failed webshop rows do not alert forever.
 The job is read-only: it never creates products/orders or changes inventory.
-Findings fail the Job and are handled by the cluster-wide
-`K8sCronJobFailed` alert and cron log analyzer.
+
+The exit code expresses whether the audit could run, not what it found. A
+finding is reported in the Job's log and the process still exits 0, so the
+Job ends `Complete`. `Failed` now means the audit itself could not be
+carried out — Shopify/Picqer API unreachable, bad credentials, an
+interrupted sweep, or the deadline hit.
+
+`K8sCronJobFailed` narrows accordingly rather than turning off: it still
+covers "could not audit", which is the case that needs someone to look
+overnight, but it no longer fires on findings. A finding lives only in the
+Job pod's log, bounded by `successfulJobsHistoryLimit: 7` and
+`ttlSecondsAfterFinished: 604800` (7 days). `skirmshop` pods run on
+`sauvage` and do not reach Loki, so past that window there is no forensic
+trail. That gap is tracked on SC-229 and is not resolved by this change.
