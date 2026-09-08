@@ -40,5 +40,7 @@ The audit detects:
 An operational manual Picqer repair with an exact Shopify reference such as
 `ORD18753` is accepted, so historical failed webshop rows do not alert forever.
 The job is read-only: it never creates products/orders or changes inventory.
-Findings fail the Job and are handled by the cluster-wide
-`K8sCronJobFailed` alert and cron log analyzer.
+The exit code reflects whether the audit could run: an operational failure
+exits non-zero and is handled by the cluster-wide `K8sCronJobFailed` alert and
+cron log analyzer. Findings do NOT fail the Job — they are reported in the
+`...finished` event (`findings: N`) and on stderr.
