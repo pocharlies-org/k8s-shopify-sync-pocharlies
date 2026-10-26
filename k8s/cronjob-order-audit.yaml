@@ -47,12 +47,14 @@ spec:
                   value: "2026-07"
                 # Reconciled exceptions (SKIRM-168): ORD19177 fulfilled by hand
                 # on 07-10 (its service line has no SKU and re-importing it
-                # would risk a double shipment); ORD19272 and ORD19289 are
-                # factory-order/preorder campaign orders with stock 0 in every
-                # Picqer warehouse, held until stock arrives. Picqer re-evaluates
-                # them when the Shopify order is updated.
+                # would risk a double shipment); ORD19272, ORD19289 and
+                # ORD19407 are factory-order/preorder orders whose Shopify
+                # fulfillment order is SCHEDULED (stock 0, held until stock
+                # arrives): Picqer only imports once the fulfillment order
+                # turns OPEN and re-evaluates on order update, so there is
+                # nothing for it to pick yet.
                 - name: ORDER_AUDIT_EXCEPTIONS
-                  value: "ORD19177,ORD19272,ORD19289"
+                  value: "ORD19177,ORD19272,ORD19289,ORD19407"
               envFrom:
                 - secretRef:
                     name: shopify-sync-secrets
