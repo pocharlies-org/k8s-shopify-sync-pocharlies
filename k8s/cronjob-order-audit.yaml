@@ -32,7 +32,7 @@ spec:
             topology: lan
           containers:
             - name: order-audit
-              image: harbor.e-dani.com/homelab/shopify-sync-app@sha256:6d38fc871135b3c9d4794946cad944e699a44ab688b8917b241c53b436c6d62f
+              image: harbor.e-dani.com/homelab/shopify-sync-app@sha256:5a1fc60b3139e5b359cf618e554d6af557a34a14ec51aff01c6a1e451c5753d9
               imagePullPolicy: IfNotPresent
               workingDir: /app
               command:
@@ -45,6 +45,14 @@ spec:
                   value: "15"
                 - name: SHOPIFY_ORDER_AUDIT_API_VERSION
                   value: "2026-07"
+                # Reconciled exceptions (SKIRM-168): ORD19177 fulfilled by hand
+                # on 07-10 (its service line has no SKU and re-importing it
+                # would risk a double shipment); ORD19272 and ORD19289 are
+                # factory-order/preorder campaign orders with stock 0 in every
+                # Picqer warehouse, held until stock arrives. Picqer re-evaluates
+                # them when the Shopify order is updated.
+                - name: ORDER_AUDIT_EXCEPTIONS
+                  value: "ORD19177,ORD19272,ORD19289"
               envFrom:
                 - secretRef:
                     name: shopify-sync-secrets
