@@ -32,7 +32,7 @@ spec:
             topology: lan
           containers:
             - name: warehouse-sync
-              image: harbor.e-dani.com/homelab/shopify-sync-app@sha256:5ef43eec304e49ba9c9790b35d1f3efa5032c95893aa0dcfa98f7740e8796466
+              image: harbor.e-dani.com/homelab/shopify-sync-app@sha256:006a19c483e40fb9865a47b14371e4db1eff0c1d5433241256410a913fa947ab
               imagePullPolicy: IfNotPresent
               workingDir: /app
               command:
