@@ -7,8 +7,8 @@ resources:
   - externalsecret.yaml
   - pvc.yaml
   - cronjob.yaml
-  - cronjob-weights.yaml
   - cronjob-order-audit.yaml
+  - weight-receiver.yaml
 
 labels:
   - includeSelectors: false

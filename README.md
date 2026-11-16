@@ -44,3 +44,30 @@ The exit code reflects whether the audit could run: an operational failure
 exits non-zero and is handled by the cluster-wide `K8sCronJobFailed` alert and
 cron log analyzer. Findings do NOT fail the Job — they are reported in the
 `...finished` event (`findings: N`) and on stderr.
+
+## Product weight by event (SKIRM-500)
+
+`shopify-sync-weights` (every 6 h, whole-catalog sweep matched by exact
+`productcode`) is gone: the weight now moves by event.
+
+`shopify-sync-weight-receiver` (`k8s/weight-receiver.yaml`) runs
+`dist/scripts/weight-server.js` from the same image and answers, under
+`https://sauvage.e-dani.com/shopify-sync`:
+
+- `POST /shopify-sync/webhooks/products` — Shopify's `products/create` and
+  `products/update` (HMAC-verified with the app's API secret as
+  `SHOPIFY_WEBHOOK_SECRET`, deduplicated by `X-Shopify-Webhook-Id`). It
+  resyncs only that product.
+- `GET /shopify-sync/v1/weights/<sku>` and `POST /shopify-sync/v1/weights`
+  (`{"sku"}` / `{"skus":[…]}`) — bearer `WEIGHT_API_TOKEN`.
+
+The two webhook subscriptions are created once in the Shopify Admin API
+(`webhookSubscriptionCreate`, topics `PRODUCTS_CREATE` and `PRODUCTS_UPDATE`,
+callback `https://sauvage.e-dani.com/shopify-sync/webhooks/products`) by the
+app that owns the Admin token, `Pocharlies Catalog RAG Sync`; its API secret
+key is the HMAC key. If the route changes, the subscriptions must be re-created
+or the events stop arriving silently.
+
+Both secrets come from the 1Password item `skirmshop-shopify-sync` through the
+existing ExternalSecret (`refreshInterval: 24h`, force-sync to pick one up
+sooner). The process refuses to start without them.
