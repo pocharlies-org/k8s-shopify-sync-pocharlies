@@ -31,7 +31,7 @@ spec:
           effect: NoSchedule
       containers:
         - name: receiver
-          image: harbor.lan.e-dani.com/homelab/shopify-sync-app@sha256:6fbb8a10aa865f94a230b2ebd4808f1c848534d764a1050262bcb52ca8a9c159
+          image: harbor.lan.e-dani.com/homelab/shopify-sync-app@sha256:7ac29cdc04036a5019025cee7e1a881d212d08a242a51b8408da382c10f55d80
           imagePullPolicy: IfNotPresent
           command:
             - node
