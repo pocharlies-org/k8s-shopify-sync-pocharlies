@@ -42,7 +42,7 @@ spec:
             node-pool: ovh-heavy
           containers:
             - name: warehouse-sync
-              image: harbor.e-dani.com/homelab/shopify-sync-app@sha256:33868c700e0cb07f4015a47ed50bfa6bd327ebeadba0b32d9f7766b9f9f59d2e
+              image: harbor.e-dani.com/homelab/shopify-sync-app@sha256:e920667f6e58063cd380e5bf4182763ccc71ebb176b568554a93f8d73284770e
               imagePullPolicy: IfNotPresent
               workingDir: /app
               command:
