@@ -1,3 +1,11 @@
+# RED DECLARADA (C-1, SC-5888 / SC-5806 «Events, never polling»): desde el 17-11 el
+# camino principal va por evento — move del picker → clave `picqer.skirmshop.product.moved`
+# → workflow synapse `skirmshop.k8s.shopify-sync-warehouse` → Job desde este CronJob con
+# SOLO_SKU=<productcode> (mismo join, misma baseline, misma escritura atómica). Este
+# manifiesto es la plantilla del Job y su horario pasa de cada 4 h a DIARIO porque cubre
+# lo que el evento no puede: el sentido Shopify→Picqer (el metafield custom.warehouse_location
+# es de VARIANTE y `products/update` no dispara por metafields — sin webhook fiable) y los
+# eventos perdidos. No se borra.
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -6,7 +14,7 @@ metadata:
     app.kubernetes.io/name: shopify-sync
     app.kubernetes.io/component: cron
 spec:
-  schedule: "17 */4 * * *"
+  schedule: "17 5 * * *" # diario (antes 17 */4 * * *): ver el bloque de arriba — red declarada
   timeZone: Europe/Madrid
   suspend: false
   concurrencyPolicy: Forbid
