@@ -54,7 +54,10 @@ spec:
                     echo "State file missing: /state/.warehouse-sync-state.json" >&2
                     exit 1
                   fi
-                  node dist/scripts/sync-warehouse-locations.js sync
+                  # SC-5888 (H1 de security en synapse#398): el barrido diario y los Jobs de evento
+                  # (SOLO_SKU, creados por synapse-adapter-k8s desde esta plantilla, sin el Forbid
+                  # del CronJob) se ponen en fila aquí: cada uno carga y guarda el estado entero.
+                  exec flock /state/.warehouse-sync.lock node dist/scripts/sync-warehouse-locations.js sync
               env:
                 - name: WAREHOUSE_SYNC_STATE_FILE
                   value: /state/.warehouse-sync-state.json
