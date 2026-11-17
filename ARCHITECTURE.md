@@ -17,7 +17,9 @@ Kustomize plano (`k8s/kustomization.yaml`, namespace `skirmshop`). Sin Helm.
 Ninguno propio; no usa la base del framework (no es app web).
 
 ## Cómo se construye
-Un CronJob por job: `cronjob.yaml` (`17 */4 * * *`), `cronjob-weights.yaml` (`41 */6 * * *`), `cronjob-order-audit.yaml` (`30 2 * * *`). Las decisiones de diseño están en `plans/sc-229-order-audit-exit-semantics.md`.
+Un CronJob por job: `cronjob.yaml` (diario, `17 5 * * *`), `cronjob-weights.yaml` (`41 */6 * * *`), `cronjob-order-audit.yaml` (`30 2 * * *`). Las decisiones de diseño están en `plans/sc-229-order-audit-exit-semantics.md`.
+- Ficha `shopify-sync-warehouse` (SC-5888, A3 de SC-5806): el camino principal (Picqer→Shopify) va por evento — move del picker → `picqer.skirmshop.product.moved` → workflow synapse `skirmshop.k8s.shopify-sync-warehouse` → Job desde este CronJob con `SOLO_SKU` (script `sync-warehouse-locations.ts sync` en la imagen, mismo join y misma escritura atómica). El horario queda como red diaria declarada: sentido Shopify→Picqer (metafield de variante sin webhook) y eventos perdidos.
+- Imagen: la construye la CI del repo fuente `pocharlies-org/shopify-sync-app` (`release.yml` → reusable `reusable-release.yml` de `k8s-gitops-pocharlies`, runner `arc-k8s`: docker build + Trivy + cosign → `harbor.e-dani.com/homelab/shopify-sync-app`), disparada por tag `v*` o `workflow_dispatch` con `version` (p. ej. `k8s-20261116-skirm500-r2`). Aquí no hay `release.yml`: el pin por digest se actualiza editando `cronjob.yaml`/`weight-receiver.yaml` tras cada release.
 
 ## Tests y validaciones
 `reusable-ci.yml` renderiza kustomize + kubeconform y yamllint. El código se prueba en el repo fuente.
