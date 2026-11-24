@@ -43,7 +43,7 @@ spec:
             topology: lan
           containers:
             - name: order-audit
-              image: harbor.e-dani.com/homelab/shopify-sync-app@sha256:279a0922cfa3cd6c3a0de11259078ea46a46a3a83f59c7b1c9e715684aebb2ae
+              image: harbor.e-dani.com/homelab/shopify-sync-app@sha256:58865b51562ebe45ac13c0cfe655f5f531a1a469539adc4599e8300fe21ac223
               imagePullPolicy: IfNotPresent
               workingDir: /app
               command:
