@@ -1,3 +1,14 @@
+# RED DECLARADA (SKIRM-628 / SC-5617 «Events, never polling»): desde SKIRM-628 el
+# camino principal va por evento — `shopify.skirmshop.orders.paid` (gateway →
+# synapse-adapter-shopify) → workflow synapse `skirmshop.k8s.shopify-picqer-order-audit`
+# → Job desde este CronJob con `SOLO_ORDER=<ORDnnnnn>` (mismo join, misma min-age
+# esperada, mismas excepciones). Este manifiesto es la plantilla del Job y su horario
+# diario es la red declarada (C-1), no el mecanismo principal: cubre lo que el evento
+# no puede — eventos perdidos, pedidos que nunca disparan `orders/paid` (authorized /
+# parcialmente pagados / capturas manuales) y los pedidos de campaña cuyo fulfillment
+# order pasa a OPEN cuando llega el stock (`fulfillment_orders/open` no existe en el
+# bus: sin entrada en el registry ni en `allowed_topics` de synapse-adapter-shopify;
+# crear la suscripción en Shopify es un cambio de producción). No se borra.
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -6,7 +17,7 @@ metadata:
     app.kubernetes.io/name: shopify-sync
     app.kubernetes.io/component: order-audit
 spec:
-  schedule: "30 2 * * *"
+  schedule: "30 2 * * *" # diario: ya era la frecuencia; lo que cambia es el rol (red del evento)
   timeZone: Europe/Madrid
   suspend: false
   concurrencyPolicy: Forbid
@@ -45,14 +56,17 @@ spec:
                   value: "15"
                 - name: SHOPIFY_ORDER_AUDIT_API_VERSION
                   value: "2026-07"
-                # Reconciled exceptions (SKIRM-168): ORD19177 fulfilled by hand
-                # on 07-10 (its service line has no SKU and re-importing it
-                # would risk a double shipment); ORD19272, ORD19289 and
-                # ORD19407 are factory-order/preorder orders whose Shopify
-                # fulfillment order is SCHEDULED (stock 0, held until stock
-                # arrives): Picqer only imports once the fulfillment order
-                # turns OPEN and re-evaluates on order update, so there is
-                # nothing for it to pick yet.
+                # Reconciled exceptions (SKIRM-168), revisadas en SKIRM-628 y
+                # todavía aplicables (estado leído de Shopify el 24-11-2026):
+                # ORD19177 sigue PARTIALLY_FULFILLED (fulfillment manual del
+                # 07-10; su línea de servicio «Mantenimiento Replica» sigue sin
+                # SKU y re-importarla arriesgaría un doble envío). ORD19272,
+                # ORD19289 y ORD19407 siguen ON_HOLD — pedidos de campaña/
+                # preorder sin stock (fabricación en curso): Picqer importa
+                # cuando el fulfillment order pasa a OPEN, y ese evento no
+                # existe en el bus, así que sin esta excepción cada barrido
+                # (y, desde SKIRM-628, cada evento paid repetido) sería ruido.
+                # SKIRM-521 intentó caducarlas por plazo y se revirtió (#22).
                 - name: ORDER_AUDIT_EXCEPTIONS
                   value: "ORD19177,ORD19272,ORD19289,ORD19407"
               envFrom:

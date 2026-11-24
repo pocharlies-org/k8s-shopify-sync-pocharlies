@@ -24,10 +24,16 @@ Activation record:
 
 ## Shopify → Picqer order audit
 
-`shopify-picqer-order-audit` runs every day at 02:30 Europe/Madrid. It reads
-the last 14 days of paid Shopify orders and verifies that each physical order
-has become an operational Picqer order. The 15-minute minimum age avoids the
-normal import race immediately after checkout.
+Main path is the event (SKIRM-628, SC-5617): `shopify.skirmshop.orders.paid`
+→ synapse workflow `skirmshop.k8s.shopify-picqer-order-audit` → a Job created
+from this CronJob's template with `SOLO_ORDER=<ORDnnnnn>`, which audits that
+one order (waiting out the 15-minute minimum age, then re-reading it).
+
+The CronJob itself — every day at 02:30 Europe/Madrid, last 14 days — is the
+declared net: lost events, orders that never fire `orders/paid`
+(authorized/partially-paid/manual captures) and campaign orders whose
+fulfillment order turns OPEN later (`fulfillment_orders/open` is not on the
+bus). It is not the primary mechanism and it is not deleted.
 
 The audit detects:
 
