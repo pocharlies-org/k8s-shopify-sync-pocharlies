@@ -1,14 +1,14 @@
-# RED DECLARADA (SKIRM-628 / SC-5617 «Events, never polling»): desde SKIRM-628 el
-# camino principal va por evento — `shopify.skirmshop.orders.paid` (gateway →
+# PLANTILLA (SC-6595; SC-5806 C-2, Dani 25-11: sin redes por reloj). Desde SKIRM-628
+# el camino va por evento — `shopify.skirmshop.orders.paid` (gateway →
 # synapse-adapter-shopify) → workflow synapse `skirmshop.k8s.shopify-picqer-order-audit`
 # → Job desde este CronJob con `SOLO_ORDER=<ORDnnnnn>` (mismo join, misma min-age
-# esperada, mismas excepciones). Este manifiesto es la plantilla del Job y su horario
-# diario es la red declarada (C-1), no el mecanismo principal: cubre lo que el evento
-# no puede — eventos perdidos, pedidos que nunca disparan `orders/paid` (authorized /
-# parcialmente pagados / capturas manuales) y los pedidos de campaña cuyo fulfillment
-# order pasa a OPEN cuando llega el stock (`fulfillment_orders/open` no existe en el
-# bus: sin entrada en el registry ni en `allowed_topics` de synapse-adapter-shopify;
-# crear la suscripción en Shopify es un cambio de producción). No se borra.
+# esperada, mismas excepciones). Este CronJob ya no corre por horario: es solo la
+# plantilla del Job. Lo que cubría el barrido diario de las 02:30 y ya no cubre nadie
+# hasta el reloj único de la ola 2: eventos perdidos, pedidos que nunca disparan
+# `orders/paid` (authorized / parcialmente pagados / capturas manuales), los pedidos
+# de campaña cuyo fulfillment order pasa a OPEN cuando llega el stock
+# (`fulfillment_orders/open` no está en el bus) y el gauge SC-389
+# `shopify_picqer_order_audit_findings`, que solo empuja el barrido.
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -17,11 +17,9 @@ metadata:
     app.kubernetes.io/name: shopify-sync
     app.kubernetes.io/component: order-audit
 spec:
-  schedule: "30 2 * * *" # diario: ya era la frecuencia; lo que cambia es el rol (red del evento)
-  timeZone: Europe/Madrid
-  suspend: false
+  suspend: true
+  schedule: "0 0 31 2 *" # nunca: plantilla del Job que crea synapse-adapter-k8s
   concurrencyPolicy: Forbid
-  startingDeadlineSeconds: 1800
   successfulJobsHistoryLimit: 7
   failedJobsHistoryLimit: 7
   jobTemplate:

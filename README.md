@@ -29,11 +29,12 @@ Main path is the event (SKIRM-628, SC-5617): `shopify.skirmshop.orders.paid`
 from this CronJob's template with `SOLO_ORDER=<ORDnnnnn>`, which audits that
 one order (waiting out the 15-minute minimum age, then re-reading it).
 
-The CronJob itself — every day at 02:30 Europe/Madrid, last 14 days — is the
-declared net: lost events, orders that never fire `orders/paid`
-(authorized/partially-paid/manual captures) and campaign orders whose
-fulfillment order turns OPEN later (`fulfillment_orders/open` is not on the
-bus). It is not the primary mechanism and it is not deleted.
+The CronJob itself is only the Job template since SC-6595 (SC-5806 C-2, no
+clock-based nets): `suspend: true`, schedule `0 0 31 2 *`. The daily 02:30
+sweep (last 14 days) is gone until the single clock of wave 2 exists, so lost
+events, orders that never fire `orders/paid` (authorized/partially-paid/manual
+captures) and campaign orders whose fulfillment order turns OPEN later are not
+audited, and the SC-389 gauge is not pushed.
 
 The audit detects:
 
