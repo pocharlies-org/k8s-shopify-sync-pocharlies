@@ -22,6 +22,33 @@ Activation record:
 4. Manual Job `shopify-sync-manual-20260527045004` completed on 2026-05-27.
 5. Host cron `warehouse_sync` removed after backup.
 
+## Warehouse location sync (SC-6603, C-2 de SC-5806)
+
+Desde el 25-11-2026 `shopify-sync-warehouse` **no se programa**: `suspend: true` y
+`schedule: "0 0 31 2 *"` (31 de febrero). El manifiesto se queda en el repo porque
+`synapse-adapter-k8s` crea el Job a partir de su `jobTemplate` (con `SOLO_SKU` inyectado)
+y porque el `flock` de `/state` del comando sigue poniendo en fila el barrido manual y los
+Jobs de evento. No hay red horaria (C-2, sin relojes): un evento perdido no se recupera hasta
+que el SKU vuelva a tocarse, hasta el reloj único de la ola 2 de SC-5806, o hasta que alguien lance
+el barrido a mano (`node dist/scripts/sync-warehouse-locations.js sync`).
+
+Los disparadores, los tres por evento:
+
+- `picqer.skirmshop.product.moved` — move en el picker (SC-5888).
+- `picqer.skirmshop.product.changed` — edición de la ficha; desde SC-6603 `SOLO_SKU`
+  también espeja el `productcode_supplier` de ese SKU.
+- `eventos.shopify-sync.product_changed` — sentido Shopify→Picqer. Lo publica el receptor
+  de pesos (`POST /eventos` del gateway, una clave por SKU del producto entregado) porque
+  el webhook `products/update` es la única entrega que se ve siempre: el adaptador shopify
+  de synapse descarta las entregas que no cambian facetas traducibles, y el metafield
+  `custom.warehouse_location` es de variante.
+
+Los dos primeros los lanza el workflow `skirmshop.k8s.shopify-sync-warehouse`; el tercero,
+`skirmshop.k8s.shopify-sync-warehouse-shopify` (los eventos de `/eventos` llegan envueltos
+por el outbox: `event.data.body.productcode`). El receptor necesita
+`SYNAPSE_EVENTOS_URL` (fija en el Deployment) y `SYNAPSE_EVENTOS_SECRET` (clave del item
+1Password `skirmshop-shopify-sync`, vía `envFrom`); sin la segunda no publica nada.
+
 ## Shopify → Picqer order audit
 
 Main path is the event (SKIRM-628, SC-5617): `shopify.skirmshop.orders.paid`
