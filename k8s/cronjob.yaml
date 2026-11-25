@@ -1,11 +1,23 @@
-# RED DECLARADA (C-1, SC-5888 / SC-5806 «Events, never polling»): desde el 17-11 el
-# camino principal va por evento — move del picker → clave `picqer.skirmshop.product.moved`
-# → workflow synapse `skirmshop.k8s.shopify-sync-warehouse` → Job desde este CronJob con
-# SOLO_SKU=<productcode> (mismo join, misma baseline, misma escritura atómica). Este
-# manifiesto es la plantilla del Job y su horario pasa de cada 4 h a DIARIO porque cubre
-# lo que el evento no puede: el sentido Shopify→Picqer (el metafield custom.warehouse_location
-# es de VARIANTE y `products/update` no dispara por metafields — sin webhook fiable) y los
-# eventos perdidos. No se borra.
+# PLANTILLA DEL JOB (C-2, SC-6603 fila #65 de SC-5806 «Events, never polling»): desde el
+# 25-11-2026 este CronJob NO se programa — `suspend: true` + `0 0 31 2 *` (31 de febrero:
+# nunca). Daniel decidió migrar los CronJobs de casa a eventos **sin red**: no queda
+# barrido diario que recupere lo que un evento pierda. El manifiesto sigue aquí porque
+# `synapse-adapter-k8s` (`k8s.job_from_cronjob`) construye el Job a partir de este
+# `jobTemplate` — borrarlo dejaría los eventos sin plantilla — y porque el `flock` de
+# /state del comando es lo que pone en fila el barrido manual y los Jobs de evento.
+#
+# Qué lo dispara (todo por evento):
+#   - `picqer.skirmshop.product.moved`   (move en el picker)                      → SOLO_SKU
+#   - `picqer.skirmshop.product.changed` (edición de la ficha: código de proveedor) → SOLO_SKU
+#   - `eventos.shopify-sync.product_changed` (Shopify→Picqer: el receptor de pesos publica
+#     una pista por SKU en `POST /eventos` cuando Shopify entrega products/create|update)
+# Los dos primeros los lanza el workflow synapse `skirmshop.k8s.shopify-sync-warehouse`;
+# el tercero, `skirmshop.k8s.shopify-sync-warehouse-shopify`.
+#
+# Qué se pierde al quitar la red (aceptado en C-2, 25-11-2026): un evento perdido no lo
+# recupera nadie hasta que ese SKU vuelva a tocarse, hasta el reloj único de la ola 2 de
+# SC-5806, o hasta que alguien lance el barrido a mano
+# (`node dist/scripts/sync-warehouse-locations.js sync` sin `SOLO_SKU`).
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -14,9 +26,9 @@ metadata:
     app.kubernetes.io/name: shopify-sync
     app.kubernetes.io/component: cron
 spec:
-  schedule: "17 5 * * *" # diario (antes 17 */4 * * *): ver el bloque de arriba — red declarada
+  schedule: "0 0 31 2 *" # nunca (31 de febrero): ver el bloque de arriba — solo plantilla del Job
   timeZone: Europe/Madrid
-  suspend: false
+  suspend: true # C-2: la red diaria fuera; el Job lo lanza synapse
   concurrencyPolicy: Forbid
   startingDeadlineSeconds: 600
   successfulJobsHistoryLimit: 3
@@ -42,7 +54,7 @@ spec:
             node-pool: ovh-heavy
           containers:
             - name: warehouse-sync
-              image: harbor.e-dani.com/homelab/shopify-sync-app@sha256:e920667f6e58063cd380e5bf4182763ccc71ebb176b568554a93f8d73284770e
+              image: harbor.e-dani.com/homelab/shopify-sync-app@sha256:ac4a6b7d6561f283775ac651f7e3364ed9cc78ae4fcb83418c4ac4bbe943eb0b
               imagePullPolicy: IfNotPresent
               workingDir: /app
               command:

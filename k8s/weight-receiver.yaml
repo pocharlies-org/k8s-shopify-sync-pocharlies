@@ -31,7 +31,7 @@ spec:
           effect: NoSchedule
       containers:
         - name: receiver
-          image: harbor.lan.e-dani.com/homelab/shopify-sync-app@sha256:7ac29cdc04036a5019025cee7e1a881d212d08a242a51b8408da382c10f55d80
+          image: harbor.lan.e-dani.com/homelab/shopify-sync-app@sha256:ac4a6b7d6561f283775ac651f7e3364ed9cc78ae4fcb83418c4ac4bbe943eb0b
           imagePullPolicy: IfNotPresent
           command:
             - node
@@ -39,9 +39,21 @@ spec:
           ports:
             - name: http
               containerPort: 8080
+          # SC-6603 (C-2): adónde va la pista por SKU del sentido Shopify→Picqer. La
+          # clave HMAC del productor `shopify-sync` llega por `envFrom` abajo (clave
+          # `SYNAPSE_EVENTOS_SECRET` del item 1Password `skirmshop-shopify-sync`): sin
+          # ella el receptor NO publica y se comporta exactamente como antes, así que el
+          # orden de despliegue (código aquí, allowlist `eventos.producers.shopify-sync`
+          # en el gateway, credencial) no importa. Verificado: no hay NetworkPolicy
+          # default-deny en `synapse` ni en `skirmshop`, y el gateway publica su
+          # Service en el puerto 18790.
+          env:
+            - name: SYNAPSE_EVENTOS_URL
+              value: http://synapse-gateway.synapse.svc.cluster.local:18790/eventos
           # PICQER_* + SHOPIFY_STORE/ACCESS_TOKEN + SHOPIFY_WEBHOOK_SECRET +
           # WEIGHT_API_TOKEN. Without the last two the server refuses to start:
-          # no unsigned webhooks, no open API.
+          # no unsigned webhooks, no open API. Desde SC-6603 también puede traer
+          # SYNAPSE_EVENTOS_SECRET (opcional: sin él no se publica al bus).
           envFrom:
             - secretRef:
                 name: shopify-sync-secrets
